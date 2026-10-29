@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gastos del hogar</title>
+<meta name="description" content="Control de gastos del hogar">
+<meta name="theme-color" content="#EDF0EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0E1512" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Gastos">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>
+:root{
+  --bg:#EDF0EC; --surface:#FBFCFA; --ink:#17211C; --muted:#5B6A62; --line:#D5DBD5;
+  --primary:#1F5C4A; --on-primary:#FFFFFF; --primary-soft:#DCE9E2;
+  --warn:#9A6208; --warn-soft:#F6E9CC; --bad:#A83426; --bad-soft:#F5DAD4;
+  --track:#DDE3DD;
+  --r:14px; --tab-h:64px;
+  --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-tema="oscuro"]{
+  --bg:#0E1512; --surface:#16201B; --ink:#E7EEE9; --muted:#97A79E; --line:#26332C;
+  --primary:#6FCBA3; --on-primary:#0B1F17; --primary-soft:#1E3329;
+  --warn:#E3B04B; --warn-soft:#3A2F14; --bad:#F08A7A; --bad-soft:#40201B; --track:#243029;
+}
+@media (prefers-color-scheme: dark){
+  :root[data-tema="auto"]{
+    --bg:#0E1512; --surface:#16201B; --ink:#E7EEE9; --muted:#97A79E; --line:#26332C;
+    --primary:#6FCBA3; --on-primary:#0B1F17; --primary-soft:#1E3329;
+    --warn:#E3B04B; --warn-soft:#3A2F14; --bad:#F08A7A; --bad-soft:#40201B; --track:#243029;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.35;
+  -webkit-text-size-adjust:100%;font-variant-numeric:tabular-nums}
+body{overscroll-behavior-y:none}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;touch-action:manipulation;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+#app{max-width:520px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;position:relative}
+.screen{flex:1;padding:calc(env(safe-area-inset-top) + 8px) 20px calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px)}
+.screen.anim{animation:in .16s ease-out}
+.screen.wiz{padding-bottom:calc(env(safe-area-inset-bottom) + 24px);display:flex;flex-direction:column}
+@keyframes in{from{opacity:0}to{opacity:1}}
+
+/* cabecera */
+.top{display:flex;align-items:center;gap:4px;min-height:52px;margin:0 -10px}
+.top h1{font-size:19px;font-weight:650;margin:0;flex:1;letter-spacing:-.01em}
+.ib{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:var(--ink)}
+.ib:active{background:var(--primary-soft)}
+.ib svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.ib.sm{width:36px;height:36px}.ib.sm svg{width:20px;height:20px}
+
+/* inicio */
+.mes{font-size:15px;color:var(--muted);margin:0}
+.plate{position:relative;width:min(78vw,300px);aspect-ratio:1;margin:8px auto 0}
+.plate svg{width:100%;height:100%;display:block}
+.plate .arc{transition:stroke-dashoffset .9s cubic-bezier(.2,.7,.2,1)}
+.plate .mid{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 16%}
+.plate .k{font-size:14px;color:var(--muted)}
+.plate .big{font-size:clamp(40px,12vw,52px);font-weight:650;letter-spacing:-.03em;line-height:1.05;margin:2px 0}
+.plate .big.neg{color:var(--bad)}
+.plate .perday{font-size:15px;color:var(--ink)}
+.verdict{text-align:center;margin:10px 0 0;font-size:16px;font-weight:550}
+.verdict small{display:block;font-weight:400;color:var(--muted);font-size:14px;margin-top:2px}
+.sec{border-top:1px solid var(--line);margin-top:24px;padding-top:16px}
+.sec h2{font-size:16px;font-weight:650;margin:0 0 12px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.bar{height:8px;border-radius:99px;background:var(--track);overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;border-radius:99px;background:var(--primary)}
+.bar>i.w{background:var(--warn)}.bar>i.b{background:var(--bad)}
+.vig{padding:10px 0}
+.vig+.vig{border-top:1px solid var(--line)}
+.vig .n{font-weight:550}
+.vig .v{color:var(--muted);font-size:14px}
+.hint{color:var(--muted);font-size:14px;margin:6px 0 0}
+.pill{display:inline-block;font-size:13px;padding:3px 10px;border-radius:99px;background:var(--primary-soft);color:var(--primary);font-weight:550}
+.pill.w{background:var(--warn-soft);color:var(--warn)}.pill.b{background:var(--bad-soft);color:var(--bad)}
+.aviso{margin:12px 0 0;padding:10px 14px;border-radius:var(--r);background:var(--warn-soft);color:var(--warn);font-size:14px}
+
+/* barra inferior */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabs>div{max-width:520px;margin:0 auto;height:var(--tab-h);display:grid;grid-template-columns:1fr 1.25fr 1fr 1fr;align-items:center}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;color:var(--muted);height:100%;justify-content:center}
+.tab svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tab.on{color:var(--primary);font-weight:650}
+.tab.add{height:46px;margin:0 6px;border-radius:99px;background:var(--primary);color:var(--on-primary);flex-direction:row;justify-content:center;gap:6px;font-size:15px;font-weight:650}
+.tab.add svg{width:20px;height:20px;stroke-width:2.4}
+
+/* listas */
+.list{margin:0 -20px}
+.item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:12px 20px;border-bottom:1px solid var(--line)}
+.item:active{background:var(--primary-soft)}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t span{display:block;color:var(--muted);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .amt{font-weight:600;white-space:nowrap}
+.item .amt.neg{color:var(--primary)}
+.day{margin:20px 0 4px;padding:0 20px;font-size:14px;color:var(--muted);font-weight:550}
+.pend{font-size:12px;color:var(--warn);font-weight:600}
+.empty{text-align:center;color:var(--muted);padding:48px 12px}
+.empty b{display:block;color:var(--ink);font-size:17px;margin-bottom:6px}
+
+/* botones y campos */
+.btn{display:flex;align-items:center;justify-content:center;width:100%;min-height:54px;border-radius:var(--r);background:var(--primary);color:var(--on-primary);font-weight:650;font-size:17px}
+.btn:active{filter:brightness(.92)}
+.btn[disabled]{background:var(--track);color:var(--muted);cursor:default}
+.btn.ghost{background:none;color:var(--primary);border:1.5px solid var(--primary)}
+.btn.danger{background:none;color:var(--bad);border:1.5px solid var(--bad)}
+.btn.sm{min-height:44px;font-size:15px}
+.link{color:var(--primary);font-weight:600;padding:10px 0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:44px;padding:0 16px;border-radius:99px;border:1.5px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;gap:6px;font-size:16px}
+.chip.on{background:var(--primary);border-color:var(--primary);color:var(--on-primary);font-weight:600}
+.chip .x{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.4;stroke-linecap:round}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1.5px solid var(--line);border-radius:var(--r);overflow:hidden;background:var(--surface)}
+.seg button{min-height:46px;font-size:16px}
+.seg button+button{border-left:1.5px solid var(--line)}
+.seg button.on{background:var(--primary);color:var(--on-primary);font-weight:600}
+.lab{font-size:14px;color:var(--muted);margin:20px 0 8px;display:block}
+.field{position:relative}
+.field input{width:100%;min-height:50px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--surface);padding:0 48px 0 14px;font-size:16px}
+.field input:focus{outline:2px solid var(--primary);outline-offset:0;border-color:var(--primary)}
+.field .clr{position:absolute;right:4px;top:50%;transform:translateY(-50%)}
+.field.date input{padding-right:14px}
+textarea.code{width:100%;min-height:110px;border-radius:var(--r);border:1.5px solid var(--line);background:var(--surface);padding:12px 48px 12px 14px;font:14px/1.3 ui-monospace,Menlo,Consolas,monospace;resize:none;color:var(--ink)}
+
+/* asistente */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:2px 0 14px}
+.steps i{height:4px;border-radius:9px;background:var(--track)}
+.steps i.on{background:var(--primary)}
+.q{font-size:22px;font-weight:650;letter-spacing:-.01em;margin:6px 0 0}
+.amount{display:flex;align-items:center;justify-content:center;gap:4px;min-height:96px;margin-top:8px}
+.amount .num{font-size:clamp(46px,14vw,60px);font-weight:650;letter-spacing:-.03em}
+.amount .num.zero{color:var(--muted);opacity:.55}
+.amount .num small{font-size:.6em;font-weight:550;margin-left:4px}
+.devol{display:flex;justify-content:center;margin-bottom:10px}
+.pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:8px 0 16px}
+.pad button{min-height:62px;border-radius:var(--r);background:var(--surface);border:1px solid var(--line);font-size:26px;font-weight:550;display:grid;place-items:center}
+.pad button:active{background:var(--primary-soft)}
+.pad svg{width:26px;height:26px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.cat{min-height:72px;border-radius:var(--r);background:var(--surface);border:1.5px solid var(--line);padding:10px 14px;text-align:left;font-weight:600;font-size:16px;display:flex;align-items:center}
+.cat:active{background:var(--primary-soft);border-color:var(--primary)}
+.sum{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0 2px}
+.sum .a{font-size:34px;font-weight:650;letter-spacing:-.02em}
+.stick{margin-top:auto;padding-top:20px}
+details.mas{margin-top:20px;border-top:1px solid var(--line)}
+details.mas summary{list-style:none;min-height:50px;display:flex;align-items:center;justify-content:space-between;color:var(--primary);font-weight:600;cursor:pointer}
+details.mas summary::-webkit-details-marker{display:none}
+details.mas[open] summary svg{transform:rotate(180deg)}
+details.mas summary svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+/* mes */
+.big2{font-size:34px;font-weight:650;letter-spacing:-.02em;margin:4px 0 0}
+.cmp{color:var(--muted);margin:4px 0 0}
+.catrow .row>span:last-child,.vig .row>span:last-child{white-space:nowrap}
+.catrow{padding:10px 0}.catrow+.catrow{border-top:1px solid var(--line)}
+.who{display:flex;align-items:center;gap:12px;padding:8px 0}
+.who b{width:92px;font-weight:550}
+.who .bar{flex:1;margin:0}
+.who span{width:84px;text-align:right}
+
+.ajrow{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.ajrow:first-of-type{border-top:0}
+
+/* aviso emergente */
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 16px);z-index:9;width:min(92vw,480px);
+  background:var(--ink);color:var(--bg);border-radius:var(--r);padding:12px 14px 12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 6px 24px rgba(0,0,0,.25);animation:in .16s ease-out}
+body[data-tabs="1"] .toast{bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 14px)}
+.toast span{flex:1;font-size:15px}
+.toast button{color:var(--bg);font-weight:700;text-decoration:underline;padding:8px 6px;min-height:40px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast-zone"></div>
+<script>
+"use strict";
+/* ============================================================ utilidades */
+const VERSION = "1.0.0";
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("gh." + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem("gh." + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem("gh." + k); } catch {} }
+};
+const nf = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", useGrouping: "always" });
+const nf0 = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0, useGrouping: "always" });
+const eur = n => nf.format(n);
+const eur0 = n => nf0.format(n);
+const short = n => String(n).replace(/\s*\(.*?\)/g, "").replace(/\s*\/.*$/, "");
+const pad2 = n => (n < 10 ? "0" : "") + n;
+const hoyISO = () => { const d = new Date(); return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate()); };
+const addDias = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); const t = new Date(y, m - 1, d + n); return t.getFullYear() + "-" + pad2(t.getMonth() + 1) + "-" + pad2(t.getDate()); };
+const fechaDe = iso => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); };
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+const I = {
+  back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  xs: '<svg class="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>',
+  home: '<svg viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 01-1 1h-4v-6h-6v6H5a1 1 0 01-1-1z"/></svg>',
+  list: '<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
+  chart: '<svg viewBox="0 0 24 24"><path d="M5 20V10M12 20V4M19 20v-7"/></svg>',
+  plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+  del: '<svg viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12a1 1 0 001-1V6a1 1 0 00-1-1z"/><path d="M17 9.5l-5 5M12 9.5l5 5"/></svg>',
+  chev: '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>'
+};
+
+/* ============================================================ estado */
+let conf = store.get("conf", null);                 // {u, k}
+let est = store.get("estado", null);                // último estado del servidor (con cambios locales)
+let cola = store.get("cola", []);                   // gastos pendientes de enviar
+let rech = store.get("rech", []);                   // gastos que el servidor ha rechazado
+let pref = Object.assign({ persona: null, tema: "auto", metodo: null, cuenta: null }, store.get("pref", {}));
+let red = { cargando: false, fallo: false, ultima: store.get("ultima", 0), enviando: false };
+let pantalla = "home";
+let draft = null;                                   // gasto que se está apuntando o editando
+let wizPush = 0;                                    // entradas de historial creadas por el asistente
+let ocupado = false;
+
+const aplicaTema = () => document.documentElement.setAttribute("data-tema", pref.tema);
+aplicaTema();
+
+/* ============================================================ red */
+async function api(accion, extra = {}, ms = 25000) {
+  if (!conf) return { ok: false, error: "clave" };
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(conf.u, {
+      method: "POST", redirect: "follow", signal: ctrl.signal,
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ clave: conf.k, accion }, extra))
+    });
+    return await r.json();
+  } catch { return { ok: false, error: "red" }; }
+  finally { clearTimeout(t); }
+}
+
+function aplicarLocal(e, d, signo) {
+  if (!e || !e.variables) return;
+  const ini = e.mes, [y, m] = ini.split("-").map(Number);
+  const sig = (m === 12 ? y + 1 : y) + "-" + pad2(m === 12 ? 1 : m + 1) + "-01";
+  if (d.fecha < ini || d.fecha >= sig) return;
+  const c = e.categorias.find(c => c.nombre === d.categoria);
+  if (c) c.gastado += signo * d.importe;
+  e.variables.gastado += signo * d.importe;
+  if (e.variables.queda != null) {
+    e.variables.queda -= signo * d.importe;
+    e.variables.porDia = e.diasQuedan > 0 ? Math.max(e.variables.queda, 0) / e.diasQuedan : null;
+  }
+  const p = e.personas.find(p => p.nombre === d.quien);
+  if (p) p.gastado += signo * d.importe;
+}
+
+const pendientes = () => cola.filter(q => !q.deshecho);
+function conPendientes(base) {            // estado del servidor + lo que aún no se ha enviado
+  const e = JSON.parse(JSON.stringify(base));
+  for (const q of pendientes()) {
+    aplicarLocal(e, q.datos, 1);
+    e.movimientos.unshift(Object.assign({ fila: null, local: q.id, pendiente: true }, q.datos));
+  }
+  return e;
+}
+let servidor = store.get("servidor", null);           // estado limpio, tal como lo devolvió el servidor
+function fijaServidor(e) {
+  servidor = e; store.set("servidor", e);
+  est = conPendientes(e); store.set("estado", est);
+  red.ultima = Date.now(); store.set("ultima", red.ultima); red.fallo = false;
+}
+
+async function refrescar(silencioso) {
+  if (!conf || red.cargando) return;
+  red.cargando = true;
+  const r = await api("estado");
+  red.cargando = false;
+  if (r.ok) fijaServidor(r.estado);
+  else { red.fallo = true; if (r.error === "clave") { avisoClave(); return; } }
+  if (!silencioso || r.ok) renderSiProcede();
+}
+
+function avisoClave() {
+  toast("La clave ya no es válida. Abre de nuevo el enlace de conexión de la hoja.", null, null, 8000);
+  conf = null; store.del("conf"); pantalla = "conectar"; history.replaceState({ s: "conectar", n: 0 }, ""); render();
+}
+
+async function enviarCola() {
+  if (!conf || red.enviando || !cola.length) return;
+  red.enviando = true;
+  while (cola.length) {
+    const q = cola[0];
+    if (q.deshecho) { cola.shift(); store.set("cola", cola); continue; }         // se deshizo antes de enviarlo
+    const r = await api("anadir", { id: q.id, datos: q.datos });
+    const k = cola.findIndex(x => x.id === q.id);
+    if (r.ok) {
+      if (k >= 0) cola.splice(k, 1);
+      store.set("cola", cola);
+      if (r.estado) { servidor = r.estado; store.set("servidor", servidor); }
+      filasEnviadas[q.id] = r.fila;
+      if (q.deshecho) {                                                              // se deshizo mientras viajaba
+        const m = r.estado && r.estado.movimientos.find(x => x.fila === r.fila);
+        const b = await api("borrar", { fila: r.fila, chk: m && m.chk });
+        if (b.ok) { servidor = b.estado; store.set("servidor", servidor); }
+      }
+    } else if (r.error === "red" || r.error === "servidor") { red.fallo = true; break; }
+    else if (r.error === "clave") { red.enviando = false; avisoClave(); return; }
+    else {
+      if (k >= 0) cola.splice(k, 1);
+      rech.push({ datos: q.datos, motivo: r.detalle || "El servidor no lo ha aceptado." });
+      store.set("cola", cola); store.set("rech", rech);
+    }
+  }
+  red.enviando = false;
+  if (servidor) { est = conPendientes(servidor); store.set("estado", est); red.ultima = Date.now(); store.set("ultima", red.ultima); }
+  renderSiProcede();
+}
+const filasEnviadas = {};
+
+/* ============================================================ avisos */
+let toastTimer = null;
+function toast(msg, accion, etiqueta, ms = 5500) {
+  const z = $("#toast-zone");
+  z.innerHTML = `<div class="toast" role="status"><span>${esc(msg)}</span>${accion ? `<button data-a="toast">${esc(etiqueta || "Deshacer")}</button>` : ""}</div>`;
+  clearTimeout(toastTimer);
+  toastAccion = accion;
+  toastTimer = setTimeout(() => { z.innerHTML = ""; toastAccion = null; }, ms);
+}
+let toastAccion = null;
+
+/* ============================================================ navegación */
+const TABS = ["home", "mov", "mes"];
+function atras() {
+  if (wizardActivo() && wizPush > 0) { wizPush--; history.back(); return; }
+  if (history.state && history.state.n > 0) { history.back(); return; }
+  if (pantalla !== "home") { pantalla = "home"; history.replaceState({ s: "home", n: 0 }, ""); render(); }
+}
+function wizardActivo() { return pantalla.startsWith("add"); }
+window.addEventListener("popstate", ev => {
+  const s = ev.state && ev.state.s;
+  pantalla = s || "home";
+  if (!wizardActivo()) { draft = null; wizPush = 0; }
+  else if (!draft) pantalla = "home";
+  render();
+});
+function nav(p) {                     // movimiento dentro del asistente o entre pantallas
+  const n = (history.state && history.state.n || 0) + 1;
+  pantalla = p;
+  history.pushState({ s: p, n }, "");
+  if (wizardActivo()) wizPush++;
+  render(); window.scrollTo(0, 0);
+}
+function irTab(p) {                   // Gastos y Mes cuelgan de Inicio: atrás vuelve a Inicio
+  if (pantalla === p) return;
+  const desdeInicio = pantalla === "home";
+  pantalla = p;
+  if (p === "home") history.replaceState({ s: "home", n: 0 }, "");
+  else if (desdeInicio) history.pushState({ s: p, n: 1 }, "");
+  else history.replaceState({ s: p, n: 1 }, "");
+  render(); window.scrollTo(0, 0);
+}
+
+/* ============================================================ pantallas */
+function cab(titulo, conAtras = true, extra = "") {
+  return `<header class="top">${conAtras ? `<button class="ib" data-a="atras" aria-label="Atrás">${I.back}</button>` : '<span style="width:10px"></span>'}<h1>${esc(titulo)}</h1>${extra}</header>`;
+}
+function barraTabs() {
+  const t = (id, ico, txt) => `<button class="tab ${pantalla === id ? "on" : ""}" data-a="tab" data-p="${id}" ${pantalla === id ? 'aria-current="page"' : ""}>${ico}<span>${txt}</span></button>`;
+  return `<nav class="tabs" aria-label="Principal"><div>${t("home", I.home, "Inicio")}<button class="tab add" data-a="nuevo" aria-label="Apuntar gasto">${I.plus}<span>Apuntar</span></button>${t("mov", I.list, "Gastos")}${t("mes", I.chart, "Mes")}</div></nav>`;
+}
+const mayus = t => t.charAt(0).toUpperCase() + t.slice(1);
+function mesTexto(iso) { return mayus(fechaDe(iso).toLocaleDateString("es-ES", { month: "long", year: "numeric" })); }
+function diaTexto(iso) {
+  const h = hoyISO();
+  if (iso === h) return "Hoy"; if (iso === addDias(h, -1)) return "Ayer";
+  return mayus(fechaDe(iso).toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" }).replace(/\./g, ""));
+}
+function nivel(uso) { return uso > 1 ? "b" : uso >= 0.8 ? "w" : ""; }
+
+/* ---- Inicio ---- */
+function plato(e) {
+  const v = e.variables, prev = v.previsto || 0;
+  const dm = new Date(+e.mes.slice(0, 4), +e.mes.slice(5, 7), 0).getDate();
+  const queda = v.queda ?? 0;
+  const fracDinero = prev > 0 ? Math.max(0, Math.min(1, queda / prev)) : 0;
+  const fracTiempo = e.diasQuedan != null ? Math.max(0, Math.min(1, e.diasQuedan / dm)) : 0;
+  const transcurridos = dm - (e.diasQuedan ?? dm);
+  let estado = "ok", frase = "Vais al ritmo previsto";
+  if (prev <= 0) { estado = "ok"; frase = "Aún no hay presupuesto definido"; }
+  else if (queda < 0) { estado = "b"; frase = "Habéis superado el presupuesto del mes"; }
+  else if (e.diasQuedan === 0) { estado = "ok"; frase = "El mes ha terminado"; }
+  else if (transcurridos < 3) { estado = "ok"; frase = "El mes acaba de empezar"; }
+  else if (fracDinero < fracTiempo - 0.25) { estado = "b"; frase = "Gastáis bastante más deprisa que el plan"; }
+  else if (fracDinero < fracTiempo - 0.10) { estado = "w"; frase = "Gastáis algo más deprisa que el plan"; }
+  const R = 100, C = 2 * Math.PI * R;
+  const col = estado === "b" ? "var(--bad)" : estado === "w" ? "var(--warn)" : "var(--primary)";
+  const ang = fracTiempo * 2 * Math.PI;
+  const ux = Math.sin(ang), uy = -Math.cos(ang);
+  const tick = e.diasQuedan > 0 && prev > 0
+    ? `<line x1="${(120 + ux * (R - 13)).toFixed(1)}" y1="${(120 + uy * (R - 13)).toFixed(1)}" x2="${(120 + ux * (R + 13)).toFixed(1)}" y2="${(120 + uy * (R + 13)).toFixed(1)}" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>` : "";
+  const dias = e.diasQuedan > 0 ? (e.diasQuedan === 1 ? "queda 1 día" : `quedan ${e.diasQuedan} días`) : "mes terminado";
+  const svg = `<svg viewBox="0 0 240 240" role="img" aria-label="Dinero que queda del presupuesto del mes">
+    <circle cx="120" cy="120" r="116" fill="none" stroke="var(--line)" stroke-width="1.5"/>
+    <circle cx="120" cy="120" r="${R}" fill="none" stroke="var(--track)" stroke-width="14"/>
+    <circle class="arc" id="arc" cx="120" cy="120" r="${R}" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round"
+      stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${C.toFixed(1)}" data-off="${(C * (1 - fracDinero)).toFixed(1)}" transform="rotate(-90 120 120)"/>
+    <circle cx="120" cy="120" r="82" fill="var(--surface)" stroke="var(--line)" stroke-width="1"/>
+    ${tick}</svg>`;
+  const porDia = v.porDia != null && e.diasQuedan > 0 && queda > 0 ? `≈ ${eur(v.porDia)} al día` : "&nbsp;";
+  return `<div class="plate">${svg}<div class="mid"><span class="k">Queda este mes</span><span class="big ${queda < 0 ? "neg" : ""}">${eur0(queda)}</span><span class="perday">${porDia}</span></div></div>
+    <p class="verdict">${esc(frase)}<small>${dias} · sobre las categorías con presupuesto</small></p>`;
+}
+function vigilado(e, patron, etiqueta) {
+  const c = e.categorias.find(c => patron.test(c.nombre));
+  if (!c) return "";
+  if (c.previsto > 0) {
+    const uso = c.gastado / c.previsto;
+    return `<div class="vig"><div class="row"><span class="n">${esc(etiqueta)}</span><span class="v">${eur0(c.gastado)} de ${eur0(c.previsto)}</span></div>
+      <div class="bar"><i class="${nivel(uso)}" style="width:${Math.min(100, Math.max(uso * 100, c.gastado > 0 ? 2 : 0)).toFixed(0)}%"></i></div></div>`;
+  }
+  return `<div class="vig"><div class="row"><span class="n">${esc(etiqueta)}</span><span class="v">${eur0(c.gastado)} · sin tope</span></div></div>`;
+}
+function renderHome() {
+  const e = est;
+  let html = `<header class="top"><span style="width:10px"></span><h1 class="mes" style="font-weight:550">${e ? esc(mesTexto(e.mes)) : "Gastos del hogar"}</h1>
+    <button class="ib" data-a="ajustes" aria-label="Ajustes">${I.gear}</button></header>`;
+  if (!e) {
+    html += `<div class="empty"><b>${red.cargando ? "Cargando…" : "Sin datos todavía"}</b>${red.cargando ? "" : "Comprueba la conexión y vuelve a intentarlo."}<div style="margin-top:16px"><button class="btn ghost sm" data-a="sync">Reintentar</button></div></div>`;
+    return html;
+  }
+  html += plato(e);
+  if (red.fallo) html += `<p class="aviso">Sin conexión: se muestran los últimos datos guardados.</p>`;
+  if (pendientes().length) html += `<p class="aviso">${pendientes().length === 1 ? "1 gasto pendiente" : pendientes().length + " gastos pendientes"} de enviar. Se enviarán solos cuando haya conexión.</p>`;
+  if (rech.length) html += `<p class="aviso" style="background:var(--bad-soft);color:var(--bad)">${rech.length === 1 ? "Un gasto no se pudo guardar" : rech.length + " gastos no se pudieron guardar"}: ${esc(rech[0].motivo)} <button class="link" data-a="verRech" style="color:inherit;text-decoration:underline">Ver</button></p>`;
+  const a = e.ahorro;
+  if (a && a.objetivo > 0 && a.previsto != null) {
+    const pct = Math.max(0, Math.min(1, a.previsto / a.objetivo));
+    html += `<section class="sec"><h2>Ahorro del mes</h2><div class="row"><span>Si seguís el plan: <b>${eur0(a.previsto)}</b></span><span class="v" style="color:var(--muted)">objetivo ${eur0(a.objetivo)}</span></div>
+      <div class="bar"><i class="${pct >= 1 ? "" : pct >= 0.6 ? "w" : "b"}" style="width:${(pct * 100).toFixed(0)}%"></i></div>
+      ${a.previsto < a.objetivo ? `<p class="hint">Faltan ${eur0(a.objetivo - a.previsto)} para llegar al objetivo con el presupuesto actual.</p>` : `<p class="hint">Con el presupuesto actual llegáis al objetivo.</p>`}</section>`;
+  }
+  const vig = vigilado(e, /supermercado/i, "Supermercado") + vigilado(e, /compras online/i, "Compras online") + vigilado(e, /hormiga/i, "Gastos hormiga");
+  if (vig) html += `<section class="sec"><h2>Para vigilar</h2>${vig}</section>`;
+  if (e.proximos && e.proximos.length) {
+    html += `<section class="sec"><h2>Cargos grandes</h2>${e.proximos.map(p => `<div class="vig"><div class="row"><span class="n">${esc(p.nombre)}</span><span class="v">${eur0(p.importe)} · ${esc(p.cuando)}</span></div></div>`).join("")}</section>`;
+  }
+  return html;
+}
+
+/* ---- Gastos (movimientos) ---- */
+function renderMov() {
+  let html = cab("Gastos", true);
+  const m = est ? est.movimientos : [];
+  if (!m.length) return html + `<div class="empty"><b>Todavía no hay gastos</b>Apunta el primero con el botón de abajo.</div>`;
+  let dia = "", out = "";
+  for (let i = 0; i < m.length; i++) {
+    const x = m[i];
+    if (x.fecha !== dia) { dia = x.fecha; out += `<div class="day">${esc(diaTexto(dia))}</div>`; }
+    const sub = [x.quien, x.metodo, x.concepto].filter(Boolean).join(" · ");
+    out += `<button class="item" data-a="mov" data-i="${i}"><div class="t"><b>${esc(short(x.categoria))}</b><span>${esc(sub)}</span></div>
+      ${x.pendiente ? '<span class="pend">sin enviar</span>' : ""}<span class="amt ${x.importe < 0 ? "neg" : ""}">${eur(x.importe)}</span></button>`;
+  }
+  return html + `<div class="list">${out}</div><p class="hint" style="text-align:center;margin-top:20px">Se muestran los últimos ${m.length} gastos.</p>`;
+}
+
+/* ---- Mes ---- */
+function renderMes() {
+  let html = cab("Este mes", true);
+  const e = est;
+  if (!e) return html + `<div class="empty"><b>Sin datos todavía</b>Vuelve a intentarlo con conexión.</div>`;
+  const v = e.variables;
+  html += `<p class="cmp" style="margin-top:0">${esc(mesTexto(e.mes))}</p><p class="big2">${eur(v.gastado)}</p>
+    <p class="cmp">gastado en variables${v.previsto > 0 ? ` de ${eur0(v.previsto)} previstos` : ""}</p>`;
+  if (e.anterior > 0) html += `<p class="cmp">El mes pasado: ${eur0(e.anterior)}.</p>`;
+  const cats = e.categorias.filter(c => c.gastado !== 0 || c.previsto > 0).sort((a, b) => b.gastado - a.gastado);
+  const vacias = e.categorias.length - cats.length;
+  html += `<section class="sec"><h2>Por categoría</h2>` + (cats.map(c => {
+    if (c.previsto > 0) {
+      const uso = c.gastado / c.previsto;
+      return `<div class="catrow"><div class="row"><span class="n">${esc(short(c.nombre))}</span><span style="color:var(--muted);font-size:14px">${eur0(c.gastado)} de ${eur0(c.previsto)}</span></div>
+        <div class="bar"><i class="${nivel(uso)}" style="width:${Math.min(100, Math.max(uso * 100, c.gastado > 0 ? 2 : 0)).toFixed(0)}%"></i></div></div>`;
+    }
+    return `<div class="catrow"><div class="row"><span class="n">${esc(short(c.nombre))}</span><span style="color:var(--muted);font-size:14px">${eur0(c.gastado)} · sin tope</span></div></div>`;
+  }).join("") || '<p class="hint">Aún no hay gastos este mes.</p>') + (vacias > 0 ? `<p class="hint">${vacias} categorías sin gastos.</p>` : "") + `</section>`;
+  const tot = e.personas.reduce((s, p) => s + Math.max(p.gastado, 0), 0);
+  html += `<section class="sec"><h2>Por persona</h2>` + e.personas.map(p =>
+    `<div class="who"><b>${esc(p.nombre)}</b><div class="bar"><i style="width:${tot > 0 ? (Math.max(p.gastado, 0) / tot * 100).toFixed(0) : 0}%"></i></div><span>${eur0(p.gastado)}</span></div>`).join("") + `</section>`;
+  html += `<p class="hint" style="margin-top:20px">Solo variables: los fijos (hipoteca, seguros, préstamo…) no se apuntan, se cuentan solos.</p>`;
+  return html;
+}
+
+/* ---- Ajustes ---- */
+function renderAjustes() {
+  const pers = est ? est.listas.personas.slice(0, 2) : [];
+  const ult = red.ultima ? new Date(red.ultima).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "nunca";
+  return cab("Ajustes", true) + `
+    <span class="lab">Quién eres en este móvil</span>
+    <div class="seg" role="group">${pers.map(p => `<button class="${pref.persona === p ? "on" : ""}" data-a="persona" data-v="${esc(p)}">${esc(p)}</button>`).join("") || '<button disabled>Conecta la app primero</button>'}</div>
+    <span class="lab">Aspecto</span>
+    <div class="seg" role="group">${[["auto", "Automático"], ["claro", "Claro"], ["oscuro", "Oscuro"]].map(([v, t]) => `<button class="${pref.tema === v ? "on" : ""}" data-a="tema" data-v="${v}">${t}</button>`).join("")}</div>
+    <span class="lab">Sincronización</span>
+    <div class="ajrow"><span>Última vez: ${esc(ult)}${pendientes().length ? `<br><small style="color:var(--warn)">${pendientes().length} pendiente(s) de enviar</small>` : ""}</span><button class="btn ghost sm" style="width:auto;padding:0 18px" data-a="sync">Sincronizar</button></div>
+    <span class="lab">Conexión</span>
+    <div class="ajrow"><span>Este móvil está conectado a la hoja de gastos.</span><button class="btn danger sm" id="desc" style="width:auto;padding:0 18px" data-a="desc">Desconectar</button></div>
+    <div class="ajrow"><span>Versión ${VERSION}</span><button class="btn ghost sm" style="width:auto;padding:0 18px" data-a="actualizar">Buscar actualización</button></div>`;
+}
+
+/* ---- Conectar ---- */
+function renderConectar() {
+  return `<header class="top"><span style="width:10px"></span><h1>Conectar la app</h1></header>
+    <p style="margin:8px 0 0">Abre el enlace de conexión que genera la hoja (pestaña <b>Ajustes</b>, celda <b>B20</b>) y la app se conectará sola.</p>
+    <p class="hint">Si prefieres, pega aquí ese enlace o su código.</p>
+    <div class="field" style="margin-top:14px"><textarea class="code" id="codigo" rows="4" placeholder="https://…#c=…" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      <button class="ib sm clr" data-a="limpiar" data-t="codigo" aria-label="Borrar lo escrito" style="position:absolute;right:6px;top:6px;transform:none;display:none">${I.x}</button></div>
+    <p class="hint" id="errcod" style="color:var(--bad)"></p>
+    <div style="margin-top:12px"><button class="btn" data-a="conectar">Conectar</button></div>`;
+}
+function aceptaCodigo(txt) {
+  const m = /#c=([A-Za-z0-9_\-]+)/.exec(txt) || /^([A-Za-z0-9_\-]{40,})$/.exec(txt.trim());
+  if (!m) return null;
+  try {
+    let b = m[1].replace(/-/g, "+").replace(/_/g, "/"); while (b.length % 4) b += "=";
+    const o = JSON.parse(decodeURIComponent(escape(atob(b))));
+    return o && /^(https:\/\/|http:\/\/localhost)/.test(o.u) && o.k ? { u: o.u, k: o.k } : null;
+  } catch { return null; }
+}
+
+/* ---- Asistente: apuntar / editar ---- */
+function nuevoBorrador() {
+  const l = est.listas;
+  return { id: uid(), fila: null, chk: null, amt: "", neg: false, categoria: "",
+    quien: pref.persona && l.personas.includes(pref.persona) ? pref.persona : l.personas[0],
+    metodo: pref.metodo && l.metodos.includes(pref.metodo) ? pref.metodo : l.metodos[0],
+    cuenta: pref.cuenta && l.cuentas.includes(pref.cuenta) ? pref.cuenta : l.cuentas[0],
+    necesario: "", concepto: "", fecha: hoyISO(), editando: false };
+}
+const valorAmt = d => { const n = parseFloat((d.amt || "").replace(",", ".")); return isNaN(n) ? 0 : (d.neg ? -n : n); };
+function amtTexto(d) { return (d.neg ? "−" : "") + (d.amt === "" ? "0" : d.amt); }
+function pasos(n) { return `<div class="steps" aria-hidden="true"><i class="${n >= 1 ? "on" : ""}"></i><i class="${n >= 2 ? "on" : ""}"></i><i class="${n >= 3 ? "on" : ""}"></i></div>`; }
+
+function renderAdd1() {
+  const d = draft;
+  return cab(d.editando ? "Cambiar importe" : "Apuntar gasto", true) + pasos(1) + `
+    <h2 class="q" style="text-align:center">¿Cuánto ha sido?</h2>
+    <div class="amount"><span class="num ${d.amt === "" ? "zero" : ""}" id="num">${esc(amtTexto(d))}<small>€</small></span>
+      <button class="ib" id="clrAmt" data-a="limpiarImporte" aria-label="Borrar importe" style="${d.amt === "" ? "visibility:hidden" : ""}">${I.x}</button></div>
+    <div class="devol"><button class="chip ${d.neg ? "on" : ""}" id="devol" data-a="devol" aria-pressed="${d.neg}">Es una devolución</button></div>
+    <div class="pad" role="group" aria-label="Teclado">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button data-a="tecla" data-k="${n}">${n}</button>`).join("")}
+      <button data-a="tecla" data-k="," aria-label="Coma">,</button><button data-a="tecla" data-k="0">0</button><button data-a="tecla" data-k="del" aria-label="Borrar última cifra">${I.del}</button></div>
+    <div class="stick"><button class="btn" id="sig1" data-a="sig1" ${valorAmt(d) === 0 ? "disabled" : ""}>Siguiente</button></div>`;
+}
+function renderAdd2() {
+  const d = draft, l = est.listas;
+  const frec = est.frecuentes.filter(n => l.categorias.includes(n));
+  const resto = l.categorias.filter(n => !frec.includes(n));
+  return cab("Apuntar gasto", true) + pasos(2) + `
+    <h2 class="q">¿En qué ha sido?</h2><p class="hint" style="margin-top:2px">${esc(eur(valorAmt(d)))}</p>
+    <div class="grid2">${frec.map(n => `<button class="cat" data-a="cat" data-v="${esc(n)}">${esc(short(n))}</button>`).join("")}</div>
+    ${resto.length ? `<span class="lab">Otras categorías</span><div class="list">${resto.map(n => `<button class="item" data-a="cat" data-v="${esc(n)}"><div class="t"><b>${esc(short(n))}</b></div></button>`).join("")}</div>` : ""}`;
+}
+function chips(lista, actual, act, vacioPermitido) {
+  return `<div class="chips">${lista.map(v => `<button class="chip ${actual === v ? "on" : ""}" data-a="${act}" data-v="${esc(v)}" aria-pressed="${actual === v}">${esc(v)}${vacioPermitido && actual === v ? I.xs : ""}</button>`).join("")}</div>`;
+}
+function renderAdd3() {
+  const d = draft, l = est.listas;
+  const mas = d.mas || d.necesario || d.concepto || d.fecha !== hoyISO();
+  return cab(d.editando ? "Editar gasto" : "Apuntar gasto", true) + pasos(3) + `
+    <div class="sum"><button class="a" data-a="irImporte" style="text-align:left" aria-label="Cambiar importe">${esc(eur(valorAmt(d)))}</button>
+      <button class="chip on" data-a="irCategoria" aria-label="Cambiar categoría: ${esc(d.categoria)}">${esc(short(d.categoria))}${I.xs}</button></div>
+    <span class="lab">Quién</span><div class="seg" role="group">${l.personas.map(p => `<button class="${d.quien === p ? "on" : ""}" data-a="quien" data-v="${esc(p)}" aria-pressed="${d.quien === p}">${esc(p)}</button>`).join("")}</div>
+    <span class="lab">Método de pago</span>${chips(l.metodos, d.metodo, "metodo")}
+    <span class="lab">Cuenta</span>${chips(l.cuentas, d.cuenta, "cuenta")}
+    <details class="mas" ${mas ? "open" : ""}><summary>Más detalles ${I.chev}</summary>
+      <span class="lab" style="margin-top:6px">¿Necesario o capricho?</span>${chips(l.necesario, d.necesario, "nec", true)}
+      <span class="lab">Concepto</span><div class="field"><input id="concepto" type="text" maxlength="120" value="${esc(d.concepto)}" placeholder="Opcional" autocomplete="off" enterkeyhint="done">
+        <button class="ib sm clr" data-a="limpiar" data-t="concepto" aria-label="Borrar lo escrito" style="${d.concepto ? "" : "display:none"}">${I.x}</button></div>
+      <span class="lab">Fecha</span><div class="field date"><input id="fecha" type="date" value="${esc(d.fecha)}" max="${hoyISO()}"></div>
+      ${d.fecha !== hoyISO() ? `<button class="link" data-a="hoy">Poner la de hoy</button>` : ""}
+    </details>
+    <div class="stick"><button class="btn" id="guardar" data-a="guardar">${d.editando ? "Guardar cambios" : "Guardar gasto"}</button>
+      ${d.editando ? `<div style="margin-top:12px"><button class="btn danger sm" id="borrar" data-a="borrar">Borrar gasto</button></div>` : ""}</div>`;
+}
+
+/* ============================================================ pintar */
+let ultimaPantalla = null;
+function render() {
+  const app = $("#app");
+  let cuerpo = "", wiz = false, tabs = false;
+  if (!conf && pantalla !== "conectar") pantalla = "conectar";
+  if (conf && !est && pantalla !== "home" && pantalla !== "ajustes" && !pantalla.startsWith("add")) { /* sin datos: permitido */ }
+  if (wizardActivo() && (!draft || !est)) pantalla = "home";
+  switch (pantalla) {
+    case "conectar": cuerpo = renderConectar(); break;
+    case "home": cuerpo = renderHome(); tabs = true; break;
+    case "mov": cuerpo = renderMov(); tabs = true; break;
+    case "mes": cuerpo = renderMes(); tabs = true; break;
+    case "ajustes": cuerpo = renderAjustes(); break;
+    case "add1": cuerpo = renderAdd1(); wiz = true; break;
+    case "add2": cuerpo = renderAdd2(); wiz = true; break;
+    case "add3": cuerpo = renderAdd3(); wiz = true; break;
+    default: cuerpo = renderHome(); tabs = true;
+  }
+  const cambia = pantalla !== ultimaPantalla;
+  if (cambia && wiz && !(ultimaPantalla || "").startsWith("add")) { $("#toast-zone").innerHTML = ""; toastAccion = null; }
+  ultimaPantalla = pantalla;
+  app.innerHTML = `<main class="screen ${wiz ? "wiz" : ""} ${cambia ? "anim" : ""}">${cuerpo}</main>${tabs ? barraTabs() : ""}`;
+  document.body.dataset.tabs = tabs ? "1" : "0";
+  const arc = $("#arc"); if (arc) requestAnimationFrame(() => requestAnimationFrame(() => { arc.style.strokeDashoffset = arc.dataset.off; }));
+}
+function renderSiProcede() {          // refresca solo si no se está escribiendo
+  if (wizardActivo() || pantalla === "conectar") return;
+  const y = window.scrollY; render(); window.scrollTo(0, y);
+}
+
+/* ============================================================ acciones */
+function teclado(k) {
+  const d = draft;
+  if (k === "del") d.amt = d.amt.slice(0, -1);
+  else if (k === ",") { if (!d.amt.includes(",")) d.amt = (d.amt === "" ? "0" : d.amt) + ","; }
+  else {
+    const [ent, dec] = d.amt.split(",");
+    if (d.amt.includes(",") ? dec.length < 2 : ent.length < 6) d.amt = (d.amt === "0" && !d.amt.includes(",")) ? k : d.amt + k;
+  }
+  actualizaImporte();
+}
+function actualizaImporte() {
+  const d = draft;
+  const n = $("#num"); if (n) { n.innerHTML = esc(amtTexto(d)) + "<small>€</small>"; n.classList.toggle("zero", d.amt === ""); }
+  const c = $("#clrAmt"); if (c) c.style.visibility = d.amt === "" ? "hidden" : "visible";
+  const s = $("#sig1"); if (s) s.disabled = valorAmt(d) === 0;
+  const dv = $("#devol"); if (dv) { dv.classList.toggle("on", d.neg); dv.setAttribute("aria-pressed", d.neg); }
+}
+function datosDe(d) {
+  return { fecha: d.fecha, importe: Math.round(valorAmt(d) * 100) / 100, categoria: d.categoria, quien: d.quien,
+           metodo: d.metodo, cuenta: d.cuenta, necesario: d.necesario || "", concepto: (d.concepto || "").trim() };
+}
+async function guardar() {
+  if (ocupado) return;
+  const d = draft, datos = datosDe(d);
+  if (!datos.importe || !datos.categoria) return;
+  pref.persona = d.quien; pref.metodo = d.metodo; pref.cuenta = d.cuenta; store.set("pref", pref);
+  if (d.editando) {
+    if (!d.fila) { toast("Este gasto aún no se ha enviado; bórralo y vuelve a apuntarlo."); return; }
+    ocupado = true; const b = $("#guardar"); if (b) { b.disabled = true; b.textContent = "Guardando…"; }
+    const r = await api("editar", { fila: d.fila, chk: d.chk, datos });
+    ocupado = false;
+    if (r.ok) { fijaServidor(r.estado); salirAsistente(); toast("Cambios guardados."); }
+    else { if (b) { b.disabled = false; b.textContent = "Guardar cambios"; } toast(errorTexto(r)); }
+    return;
+  }
+  const q = { id: d.id, datos };
+  cola.push(q); store.set("cola", cola);
+  if (servidor) { est = conPendientes(servidor); store.set("estado", est); }
+  const c = est.categorias.find(c => c.nombre === datos.categoria);
+  let msg = "Anotado.";
+  if (c && c.previsto > 0 && datos.importe > 0) {
+    const resto = c.previsto - c.gastado;
+    msg = resto >= 0 ? `Anotado. Te quedan ${eur0(resto)} de ${short(c.nombre)} este mes.` : `Anotado. ${short(c.nombre)} supera el presupuesto en ${eur0(-resto)}.`;
+  }
+  salirAsistente();
+  toast(msg, () => deshacer(q.id), "Deshacer", 7000);
+  enviarCola().then(() => { if (red.fallo && pendientes().length) toast("Guardado en este móvil. Se enviará cuando haya conexión.", null, null, 4000); });
+}
+function salirAsistente() {
+  const n = wizPush; draft = null; wizPush = 0;
+  if (n > 0) { pantalla = "home"; history.go(-n); }
+  else { pantalla = "home"; history.replaceState({ s: "home", n: 0 }, ""); render(); }
+}
+async function deshacer(id) {
+  const q = cola.find(x => x.id === id);
+  if (q) {                                           // aún no está en la hoja (o va de camino)
+    q.deshecho = true; store.set("cola", cola);
+    if (servidor) { est = conPendientes(servidor); store.set("estado", est); }
+    renderSiProcede(); toast("Gasto deshecho."); return;
+  }
+  const fila = filasEnviadas[id];
+  if (!fila) { toast("No se pudo deshacer. Búscalo en Gastos y bórralo."); return; }
+  const m = est.movimientos.find(x => x.fila === fila);
+  const r = await api("borrar", { fila, chk: m && m.chk });
+  if (r.ok) { fijaServidor(r.estado); renderSiProcede(); toast("Gasto deshecho."); } else toast(errorTexto(r));
+}
+function errorTexto(r) {
+  if (r.error === "red") return "Sin conexión. Inténtalo de nuevo cuando vuelva.";
+  if (r.error === "cambiado") return "Ese gasto ha cambiado en la hoja. Actualiza la lista y vuelve a intentarlo.";
+  if (r.error === "datos") return r.detalle || "Datos no válidos.";
+  return "No se ha podido completar. Inténtalo de nuevo.";
+}
+async function borrarGasto() {
+  const b = $("#borrar");
+  if (b && !b.dataset.ok) { b.dataset.ok = "1"; b.textContent = "Toca otra vez para borrar"; setTimeout(() => { if (b && b.isConnected) { b.textContent = "Borrar gasto"; delete b.dataset.ok; } }, 3500); return; }
+  if (ocupado || !draft.fila) return;
+  ocupado = true;
+  const r = await api("borrar", { fila: draft.fila, chk: draft.chk });
+  ocupado = false;
+  if (r.ok) { fijaServidor(r.estado); salirAsistente(); toast("Gasto borrado."); } else toast(errorTexto(r));
+}
+function abrirMov(i) {
+  const x = est.movimientos[i]; if (!x) return;
+  if (x.pendiente) {
+    if (!confirm("Este gasto aún no se ha enviado. ¿Quieres quitarlo de la lista de pendientes?")) return;
+    const k = cola.findIndex(q => q.id === x.local); if (k >= 0) { cola[k].deshecho = true; store.set("cola", cola); est = conPendientes(servidor); store.set("estado", est); render(); }
+    return;
+  }
+  draft = { id: null, fila: x.fila, chk: x.chk, amt: String(Math.abs(x.importe)).replace(".", ","), neg: x.importe < 0, categoria: x.categoria,
+    quien: x.quien, metodo: x.metodo, cuenta: x.cuenta, necesario: x.necesario || "", concepto: x.concepto || "", fecha: x.fecha, editando: true };
+  wizPush = 0; nav("add3");
+}
+
+document.addEventListener("click", ev => {
+  const el = ev.target.closest("[data-a]"); if (!el) return;
+  const a = el.dataset.a, v = el.dataset.v;
+  switch (a) {
+    case "atras": atras(); break;
+    case "tab": irTab(el.dataset.p); break;
+    case "ajustes": nav("ajustes"); break;
+    case "nuevo":
+      if (!est) { toast("Esperando los datos de la hoja…"); refrescar(); break; }
+      draft = nuevoBorrador(); wizPush = 0; nav("add1"); break;
+    case "tecla": teclado(el.dataset.k); break;
+    case "limpiarImporte": draft.amt = ""; actualizaImporte(); break;
+    case "devol": draft.neg = !draft.neg; actualizaImporte(); break;
+    case "sig1": if (valorAmt(draft) !== 0) { if (draft.editando) { atras(); } else nav("add2"); } break;
+    case "cat": draft.categoria = v; if (draft.editando) { atras(); } else nav("add3"); break;
+    case "irImporte": nav("add1"); break;
+    case "irCategoria": nav("add2"); break;
+    case "quien": draft.quien = v; marcar(el, ".seg"); break;
+    case "metodo": draft.metodo = v; marcar(el, ".chips"); break;
+    case "cuenta": draft.cuenta = v; marcar(el, ".chips"); break;
+    case "nec": draft.necesario = draft.necesario === v ? "" : v; renderPreservando(); break;
+    case "hoy": draft.fecha = hoyISO(); renderPreservando(); break;
+    case "limpiar": { const t = $("#" + el.dataset.t); if (t) { t.value = ""; if (el.dataset.t === "concepto") draft.concepto = ""; t.focus(); el.style.display = "none"; } break; }
+    case "guardar": guardar(); break;
+    case "borrar": borrarGasto(); break;
+    case "mov": abrirMov(+el.dataset.i); break;
+    case "persona": pref.persona = v; store.set("pref", pref); marcar(el, ".seg"); break;
+    case "tema": pref.tema = v; store.set("pref", pref); aplicaTema(); marcar(el, ".seg"); break;
+    case "sync": toast("Sincronizando…", null, null, 1500); enviarCola().then(() => refrescar()); break;
+    case "verRech": alert(rech.map(r => `${eur(r.datos.importe)} · ${r.datos.categoria}: ${r.motivo}`).join("\n")); rech = []; store.set("rech", rech); render(); break;
+    case "desc": {
+      if (!el.dataset.ok) { el.dataset.ok = "1"; el.textContent = "Toca otra vez"; setTimeout(() => { if (el.isConnected) { el.textContent = "Desconectar"; delete el.dataset.ok; } }, 3500); break; }
+      ["conf", "estado", "servidor", "ultima"].forEach(store.del); conf = null; est = null; servidor = null; pantalla = "conectar"; history.replaceState({ s: "conectar", n: 0 }, ""); render(); break;
+    }
+    case "conectar": {
+      const c = aceptaCodigo($("#codigo").value);
+      if (!c) { $("#errcod").textContent = "No reconozco ese enlace. Cópialo entero desde la celda B20 de Ajustes."; break; }
+      conf = c; store.set("conf", conf); irInicio(); refrescar(); break;
+    }
+    case "actualizar": actualizarApp(); break;
+    case "toast": if (toastAccion) { const f = toastAccion; $("#toast-zone").innerHTML = ""; toastAccion = null; f(); } break;
+  }
+});
+function marcar(el, cont) {           // cambia la opción activa sin repintar toda la pantalla
+  const box = el.closest(cont);
+  box.querySelectorAll("button").forEach(b => { const on = b === el; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+}
+function renderPreservando() { const y = window.scrollY; render(); window.scrollTo(0, y); }
+function irInicio() { pantalla = "home"; history.replaceState({ s: "home", n: 0 }, ""); render(); }
+
+document.addEventListener("toggle", ev => { if (draft && ev.target.classList && ev.target.classList.contains("mas")) draft.mas = ev.target.open; }, true);
+document.addEventListener("input", ev => {
+  const t = ev.target;
+  if (t.id === "concepto") { draft.concepto = t.value; const c = t.parentElement.querySelector(".clr"); if (c) c.style.display = t.value ? "" : "none"; }
+  if (t.id === "fecha") { draft.fecha = t.value || hoyISO(); }
+  if (t.id === "codigo") { const c = t.parentElement.querySelector(".clr"); if (c) c.style.display = t.value ? "" : "none"; $("#errcod").textContent = ""; }
+});
+document.addEventListener("keydown", ev => {
+  if (pantalla === "add1" && !ev.metaKey && !ev.ctrlKey && document.activeElement.tagName !== "INPUT") {
+    if (/^[0-9]$/.test(ev.key)) teclado(ev.key); else if (ev.key === "," || ev.key === ".") teclado(","); else if (ev.key === "Backspace") teclado("del");
+    else if (ev.key === "Enter" && valorAmt(draft) !== 0) nav("add2");
+  }
+  if (ev.key === "Escape" && pantalla !== "home") atras();
+});
+
+async function actualizarApp() {
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) await reg.update();
+    const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k)));
+  } catch {}
+  location.reload();
+}
+
+/* ============================================================ arranque */
+(function arranque() {
+  const h = location.hash;
+  if (/#c=/.test(h)) {
+    const c = aceptaCodigo(h);
+    if (c) { conf = c; store.set("conf", conf); est = null; servidor = null; ["estado", "servidor", "cola"].forEach(store.del); cola = []; }
+    history.replaceState(null, "", location.pathname + location.search);
+  }
+  pantalla = conf ? "home" : "conectar";
+  history.replaceState({ s: pantalla, n: 0 }, "");
+  render();
+  if (conf) {
+    if (h && /#c=/.test(h) && conf) toast("Conectado a la hoja de gastos.", null, null, 3500);
+    refrescar(); enviarCola();
+  }
+  window.addEventListener("online", () => { enviarCola().then(() => refrescar(true)); });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && conf && !wizardActivo()) { enviarCola().then(() => refrescar(true)); }
+  });
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+</script>
+</body>
+</html>
