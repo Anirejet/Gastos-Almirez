@@ -1,5 +1,5 @@
 /* Service worker: la app se abre al instante desde el móvil y se actualiza en segundo plano. */
-const CACHE = "gastos-v1.0.0";
+const CACHE = "gastos-v1.0.1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

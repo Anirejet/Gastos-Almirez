@@ -187,7 +187,7 @@ body[data-tabs="1"] .toast{bottom:calc(var(--tab-h) + env(safe-area-inset-bottom
 <script>
 "use strict";
 /* ============================================================ utilidades */
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 const $ = (s, r = document) => r.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const store = {
@@ -224,7 +224,7 @@ let est = store.get("estado", null);                // último estado del servid
 let cola = store.get("cola", []);                   // gastos pendientes de enviar
 let rech = store.get("rech", []);                   // gastos que el servidor ha rechazado
 let pref = Object.assign({ persona: null, tema: "auto", metodo: null, cuenta: null }, store.get("pref", {}));
-let red = { cargando: false, fallo: false, ultima: store.get("ultima", 0), enviando: false };
+let red = { cargando: false, fallo: false, detalle: "", causa: "", ultima: store.get("ultima", 0), enviando: false };
 let pantalla = "home";
 let draft = null;                                   // gasto que se está apuntando o editando
 let wizPush = 0;                                    // entradas de historial creadas por el asistente
@@ -244,8 +244,10 @@ async function api(accion, extra = {}, ms = 25000) {
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(Object.assign({ clave: conf.k, accion }, extra))
     });
-    return await r.json();
-  } catch { return { ok: false, error: "red" }; }
+    const txt = await r.text();
+    try { return JSON.parse(txt); }
+    catch { return { ok: false, error: "formato", detalle: "Google ha devuelto una página en vez de datos (código " + r.status + "): " + txt.replace(/\s+/g, " ").replace(/<[^>]*>/g, " ").trim().slice(0, 90) }; }
+  } catch (e) { return { ok: false, error: "red", detalle: String((e && e.message) || e) }; }
   finally { clearTimeout(t); }
 }
 
@@ -287,7 +289,7 @@ async function refrescar(silencioso) {
   const r = await api("estado");
   red.cargando = false;
   if (r.ok) fijaServidor(r.estado);
-  else { red.fallo = true; if (r.error === "clave") { avisoClave(); return; } }
+  else { red.fallo = true; red.causa = r.error || ""; red.detalle = r.detalle || ""; if (r.error === "clave") { avisoClave(); return; } }
   if (!silencioso || r.ok) renderSiProcede();
 }
 
@@ -314,7 +316,7 @@ async function enviarCola() {
         const b = await api("borrar", { fila: r.fila, chk: m && m.chk });
         if (b.ok) { servidor = b.estado; store.set("servidor", servidor); }
       }
-    } else if (r.error === "red" || r.error === "servidor") { red.fallo = true; break; }
+    } else if (r.error === "red" || r.error === "servidor" || r.error === "formato") { red.fallo = true; red.causa = r.error; red.detalle = r.detalle || ""; break; }
     else if (r.error === "clave") { red.enviando = false; avisoClave(); return; }
     else {
       if (k >= 0) cola.splice(k, 1);
@@ -431,12 +433,19 @@ function vigilado(e, patron, etiqueta) {
   }
   return `<div class="vig"><div class="row"><span class="n">${esc(etiqueta)}</span><span class="v">${eur0(c.gastado)} · sin tope</span></div></div>`;
 }
+function explicaFallo() {
+  const d = red.detalle ? ` <span style="display:block;margin-top:6px;font-size:13px;opacity:.85">Detalle: ${esc(red.detalle)}</span>` : "";
+  if (red.causa === "formato") return "Google ha devuelto una página en vez de datos. Suele pasar si el acceso de la aplicación web no es «Cualquier usuario» o si falta crear una implementación nueva." + d;
+  if (red.causa === "servidor") return "El script de la hoja ha dado un error." + d;
+  if (red.causa === "red") return "No se ha podido contactar con el servidor de la hoja. Puede ser la conexión o que el acceso de la aplicación web no sea «Cualquier usuario»." + d;
+  return "Comprueba la conexión y vuelve a intentarlo.";
+}
 function renderHome() {
   const e = est;
   let html = `<header class="top"><span style="width:10px"></span><h1 class="mes" style="font-weight:550">${e ? esc(mesTexto(e.mes)) : "Gastos del hogar"}</h1>
     <button class="ib" data-a="ajustes" aria-label="Ajustes">${I.gear}</button></header>`;
   if (!e) {
-    html += `<div class="empty"><b>${red.cargando ? "Cargando…" : "Sin datos todavía"}</b>${red.cargando ? "" : "Comprueba la conexión y vuelve a intentarlo."}<div style="margin-top:16px"><button class="btn ghost sm" data-a="sync">Reintentar</button></div></div>`;
+    html += `<div class="empty"><b>${red.cargando ? "Cargando…" : "Sin datos todavía"}</b>${red.cargando ? "" : explicaFallo()}<div style="margin-top:16px"><button class="btn ghost sm" data-a="sync">Reintentar</button></div></div>`;
     return html;
   }
   html += plato(e);
@@ -511,6 +520,7 @@ function renderAjustes() {
     <div class="seg" role="group">${[["auto", "Automático"], ["claro", "Claro"], ["oscuro", "Oscuro"]].map(([v, t]) => `<button class="${pref.tema === v ? "on" : ""}" data-a="tema" data-v="${v}">${t}</button>`).join("")}</div>
     <span class="lab">Sincronización</span>
     <div class="ajrow"><span>Última vez: ${esc(ult)}${pendientes().length ? `<br><small style="color:var(--warn)">${pendientes().length} pendiente(s) de enviar</small>` : ""}</span><button class="btn ghost sm" style="width:auto;padding:0 18px" data-a="sync">Sincronizar</button></div>
+    ${red.fallo ? `<p class="aviso">${explicaFallo()}</p>` : ""}
     <span class="lab">Conexión</span>
     <div class="ajrow"><span>Este móvil está conectado a la hoja de gastos.</span><button class="btn danger sm" id="desc" style="width:auto;padding:0 18px" data-a="desc">Desconectar</button></div>
     <div class="ajrow"><span>Versión ${VERSION}</span><button class="btn ghost sm" style="width:auto;padding:0 18px" data-a="actualizar">Buscar actualización</button></div>`;
